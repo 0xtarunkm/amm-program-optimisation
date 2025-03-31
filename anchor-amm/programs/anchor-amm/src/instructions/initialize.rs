@@ -3,7 +3,6 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
-
 use crate::errors::AmmError;
 use crate::state::Config;
 
@@ -16,11 +15,11 @@ pub struct Initialize<'info> {
     pub mint_y: InterfaceAccount<'info, Mint>,
     #[account(
         init,
-        seeds = [b"lp", config.key.as_ref()],
+        seeds = [b"lp", config.key().as_ref()],
         payer = initializer,
         bump,
         mint::decimals = 6,
-        mint::authority = initializer
+        mint::authority = config
     )]
     pub mint_lp: InterfaceAccount<'info, Mint>,
     #[account(
@@ -53,7 +52,6 @@ pub struct Initialize<'info> {
 impl<'info> Initialize<'info> {
     pub fn init(&mut self, seed: u64, fee: u16, bumps: &InitializeBumps) -> Result<()> {
         require!(fee <= 10000, AmmError::InvalidFee);
-
         self.config.set_inner(Config {
             seed,
             mint_x: self.mint_x.key(),
@@ -63,6 +61,7 @@ impl<'info> Initialize<'info> {
             config_bump: bumps.config,
             lp_bump: bumps.mint_lp,
         });
+        
         Ok(())
     }
 }
