@@ -70,7 +70,7 @@ impl<'info> Deposit<'info> {
         min_x: u64,
         min_y: u64,
     ) -> Result<()> {
-        require!(self.config.locked, AmmError::PoolLocked);
+        require!(!self.config.locked, AmmError::PoolLocked);
         require!(min_x == 0, AmmError::TokenNonZero);
         require!(min_y == 0, AmmError::TokenNonZero);
 
@@ -84,9 +84,9 @@ impl<'info> Deposit<'info> {
         amount: u64,
         is_x: bool
     ) -> Result<()> {
-        let (from, to, mint) = match is_x {
-            true => (self.user_x.to_account_info(), self.vault_x.to_account_info(), self.mint_x.to_account_info()),
-            false => (self.user_y.to_account_info(), self.vault_y.to_account_info(), self.mint_y.to_account_info())
+        let (from, to, mint, decimals) = match is_x {
+            true => (self.user_x.to_account_info(), self.vault_x.to_account_info(), self.mint_x.to_account_info(), self.mint_x.decimals),
+            false => (self.user_y.to_account_info(), self.vault_y.to_account_info(), self.mint_y.to_account_info(), self.mint_y.decimals)
         };
 
         let cpi_accounts = TransferChecked {
@@ -98,7 +98,7 @@ impl<'info> Deposit<'info> {
 
         let ctx = CpiContext::new(self.token_program.to_account_info(), cpi_accounts);
 
-        transfer_checked(ctx, amount, self.mint_x.decimals)
+        transfer_checked(ctx, amount, decimals)
     }
 
     fn mint_lp_token(

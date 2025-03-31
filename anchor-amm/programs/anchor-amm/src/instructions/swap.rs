@@ -55,23 +55,21 @@ impl<'info> Swap<'info> {
         &mut self,
         amount_in: u64,
         min_amount_out: u64,
+        from_x: bool,
     ) -> Result<()> {
         require!(!self.config.locked, AmmError::PoolLocked);
         
-        // Determine if we're swapping X->Y or Y->X
-        let is_x_to_y = self.user_x.mint == self.mint_x.key();
-        
         // Calculate the amount out based on constant product formula (x * y = k)
-        let amount_out = self.calculate_amount_out(amount_in, is_x_to_y)?;
+        let amount_out = self.calculate_amount_out(amount_in, from_x)?;
         
         // Verify the minimum output amount
         require!(amount_out >= min_amount_out, AmmError::SlippageExceeded);
         
         // Transfer tokens from user to vault
-        self.transfer_tokens_from_user(amount_in, is_x_to_y)?;
+        self.transfer_tokens_from_user(amount_in, from_x)?;
         
         // Transfer tokens from vault to user
-        self.transfer_tokens_to_user(amount_out, !is_x_to_y)?;
+        self.transfer_tokens_to_user(amount_out, !from_x)?;
         
         Ok(())
     }
