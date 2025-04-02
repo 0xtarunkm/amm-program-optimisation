@@ -106,8 +106,6 @@ impl Config {
         config: &AccountInfo<'a>,
         user: &AccountInfo<'a>,
     ) -> ProgramResult {
-        let vault_x_account = spl_token::state::Account::unpack(&vault_x.try_borrow_data()?)?;
-        let vault_y_account = spl_token::state::Account::unpack(&vault_y.try_borrow_data()?)?;
         let mint_lp_account = spl_token::state::Mint::unpack(&mint_lp.try_borrow_data()?)?;
 
         assert!(amount <= max_x);

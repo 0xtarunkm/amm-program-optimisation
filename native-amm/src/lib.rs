@@ -3,11 +3,11 @@ use solana_program::program_error::ProgramError;
 use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
 use solana_program::{entrypoint, pubkey};
 
-mod deposit;
-mod initialize;
 mod instruction;
-mod state;
+mod initialize;
+mod deposit;
 mod swap;
+mod state;
 mod utils;
 
 const ID: Pubkey = pubkey!("6nUKY2tHTGGECKNzkPGJcsBVE8Boh1zKYLsc9Ku9GJV1");

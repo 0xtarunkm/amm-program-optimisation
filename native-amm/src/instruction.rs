@@ -22,13 +22,6 @@ impl TryFrom<&u8> for AmmInstructions {
     }
 }
 
-impl AmmInstructions {
-    pub fn serialize<T: Pod>(&self, ix: T) -> Vec<u8> {
-        let discriminator = *self as u8;
-        [&[discriminator], bytemuck::bytes_of::<T>(&ix)].concat()
-    }
-}
-
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Eq, Pod, Zeroable, TryFromBytes)]
 pub struct Initialize {
