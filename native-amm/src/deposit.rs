@@ -1,5 +1,44 @@
-use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult};
+use solana_program::{
+    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
+};
+
+use crate::{instruction::Deposit, state::Config};
 
 pub fn process(accounts: &[AccountInfo<'_>], data: &[u8]) -> ProgramResult {
-    Ok(())
+    let Deposit {
+        amount,
+        max_x,
+        max_y,
+        expiration,
+    } = Deposit::try_from(data)?;
+
+    let [user, mint_x, mint_y, mint_lp, user_x, user_y, user_lp, vault_x, vault_y, config, token_program, _system_program] =
+        accounts
+    else {
+        return Err(ProgramError::NotEnoughAccountKeys);
+    };
+
+    assert!(user.is_signer);
+
+    assert_eq!(token_program.key, &spl_token::ID);
+
+    let config_account = Config::try_from(config.data.borrow().as_ref())?;
+
+    Config::add_liquidity(
+        amount,
+        max_x,
+        max_y,
+        &config_account,
+        token_program.key,
+        user_x,
+        user_y,
+        user_lp,
+        vault_x,
+        vault_y,
+        mint_x,
+        mint_y,
+        mint_lp,
+        config,
+        user,
+    )
 }

@@ -9,8 +9,9 @@ use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::system_instruction::create_account;
 use solana_program::sysvar::Sysvar;
+use spl_token::state::Mint;
 
-use crate::utils::check_pda_and_get_bump;
+use crate::utils::{check_pda_and_get_bump, deposit, mint};
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable, TryFromBytes)]
@@ -86,5 +87,69 @@ impl Config {
         });
 
         Ok(())
+    }
+
+    pub fn add_liquidity<'a>(
+        amount: u64,
+        max_x: u64,
+        max_y: u64,
+        config_account: &Config,
+        token_program: &Pubkey,
+        user_x: &AccountInfo<'a>,
+        user_y: &AccountInfo<'a>,
+        user_lp: &AccountInfo<'a>,
+        vault_x: &AccountInfo<'a>,
+        vault_y: &AccountInfo<'a>,
+        mint_x: &AccountInfo<'a>,
+        mint_y: &AccountInfo<'a>,
+        mint_lp: &AccountInfo<'a>,
+        config: &AccountInfo<'a>,
+        user: &AccountInfo<'a>,
+    ) -> ProgramResult {
+        let vault_x_account = spl_token::state::Account::unpack(&vault_x.try_borrow_data()?)?;
+        let vault_y_account = spl_token::state::Account::unpack(&vault_y.try_borrow_data()?)?;
+        let mint_lp_account = spl_token::state::Mint::unpack(&mint_lp.try_borrow_data()?)?;
+
+        assert!(amount <= max_x);
+        assert!(amount <= max_y);
+
+        let mint_x_decimals = Mint::unpack(mint_x.data.borrow().as_ref())?.decimals;
+        let mint_y_decimals = Mint::unpack(mint_y.data.borrow().as_ref())?.decimals;
+
+        deposit(
+            token_program,
+            user_x,
+            mint_x,
+            vault_x,
+            user,
+            amount,
+            mint_x_decimals,
+        )?;
+
+        // Transfer the funds from the users's token Y account to the vault
+        deposit(
+            token_program,
+            user_y,
+            mint_y,
+            vault_y,
+            user,
+            amount,
+            mint_y_decimals,
+        )?;
+
+        // Mint LP tokens
+        mint(
+            token_program,
+            mint_lp,
+            user_lp,
+            config,
+            amount,
+            mint_lp_account.decimals,
+            &[
+                b"config",
+                config_account.seed.to_le_bytes().as_ref(),
+                &[config_account.config_bump],
+            ],
+        )
     }
 }

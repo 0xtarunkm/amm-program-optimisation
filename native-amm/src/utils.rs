@@ -1,5 +1,6 @@
 use solana_program::{
     account_info::AccountInfo,
+    clock::Clock,
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
@@ -9,7 +10,11 @@ use solana_program::{
     system_instruction::create_account,
     sysvar::Sysvar,
 };
-use spl_token::instruction::{initialize_account3, initialize_mint2};
+use spl_token::instruction::{
+    initialize_account3, initialize_mint2, mint_to_checked, transfer_checked,
+};
+
+use crate::state::Config;
 
 #[inline]
 pub fn check_pda_with_bump(
@@ -87,5 +92,100 @@ pub fn create_mint<'a>(
     invoke(
         &initialize_mint2(token_program, mint.key, authority.key, None, 0)?,
         &[mint.clone()],
+    )
+}
+
+#[inline]
+pub fn perform_basic_checks(
+    config_account: &Config,
+    expiration: i64,
+    config: &AccountInfo,
+    mint_lp: &AccountInfo,
+    vault_x: &AccountInfo,
+    vault_y: &AccountInfo,
+) -> ProgramResult {
+    assert!(Clock::get()?.unix_timestamp <= expiration);
+
+    assert_eq!(config.owner, &crate::ID);
+
+    assert_ne!(config_account.locked, 1);
+
+    check_pda_with_bump(
+        &[config.key.as_ref(), &[config_account.lp_bump]],
+        &crate::ID,
+        mint_lp.key,
+    )?;
+
+    check_pda_with_bump(
+        &[
+            config_account.mint_x.as_ref(),
+            config.key.as_ref(),
+            &[config_account.x_bump],
+        ],
+        &crate::ID,
+        vault_x.key,
+    )?;
+
+    check_pda_with_bump(
+        &[
+            config_account.mint_y.as_ref(),
+            config.key.as_ref(),
+            &[config_account.y_bump],
+        ],
+        &crate::ID,
+        vault_y.key,
+    )?;
+
+    Ok(())
+}
+
+#[inline]
+pub fn deposit<'a>(
+    token_program: &Pubkey,
+    user_from: &AccountInfo<'a>,
+    mint: &AccountInfo<'a>,
+    vault: &AccountInfo<'a>,
+    user: &AccountInfo<'a>,
+    amount: u64,
+    decimals: u8,
+) -> ProgramResult {
+    invoke(
+        &transfer_checked(
+            token_program,
+            user_from.key,
+            mint.key,
+            vault.key,
+            user.key,
+            &[],
+            amount,
+            decimals,
+        )?,
+        &[user_from.clone(), mint.clone(), vault.clone(), user.clone()],
+    )
+}
+
+#[inline]
+pub fn mint<'a>(
+    token_program: &Pubkey,
+    mint: &AccountInfo<'a>,
+    to: &AccountInfo<'a>,
+    authority: &AccountInfo<'a>,
+    amount: u64,
+    decimals: u8,
+    seeds: &[&[u8]],
+) -> ProgramResult {
+    // Transfer the funds from the maker's token account to the vault
+    invoke_signed(
+        &mint_to_checked(
+            token_program,
+            mint.key,
+            to.key,
+            authority.key,
+            &[],
+            amount,
+            decimals,
+        )?,
+        &[mint.clone(), to.clone(), authority.clone()],
+        &[seeds],
     )
 }
