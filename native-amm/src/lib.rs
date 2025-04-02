@@ -10,7 +10,7 @@ mod state;
 mod swap;
 mod utils;
 
-const ID: Pubkey = pubkey!("ArUcre1nwpeqBb6LnptBPSDZ4PMCj2uagRPeCTsLNrBn");
+const ID: Pubkey = pubkey!("6nUKY2tHTGGECKNzkPGJcsBVE8Boh1zKYLsc9Ku9GJV1");
 
 entrypoint!(process_instruction);
 
