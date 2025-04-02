@@ -11,7 +11,7 @@ use solana_program::system_instruction::create_account;
 use solana_program::sysvar::Sysvar;
 use spl_token::state::Mint;
 
-use crate::utils::{check_pda_and_get_bump, deposit, mint};
+use crate::utils::{check_pda_and_get_bump, deposit, mint, withdraw};
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable, TryFromBytes)]
@@ -126,7 +126,6 @@ impl Config {
             mint_x_decimals,
         )?;
 
-        // Transfer the funds from the users's token Y account to the vault
         deposit(
             token_program,
             user_y,
@@ -137,7 +136,6 @@ impl Config {
             mint_y_decimals,
         )?;
 
-        // Mint LP tokens
         mint(
             token_program,
             mint_lp,
@@ -151,5 +149,76 @@ impl Config {
                 &[config_account.config_bump],
             ],
         )
+    }
+
+    pub fn perform_swap<'a>(
+        config_account: &Config,
+        token_program: &Pubkey,
+        amount: u64,
+        min: u64,
+        mint_x: &AccountInfo<'a>,
+        mint_y: &AccountInfo<'a>,
+        vault_x: &AccountInfo<'a>,
+        vault_y: &AccountInfo<'a>,
+        user_from: &AccountInfo<'a>,
+        user_to: &AccountInfo<'a>,
+        config: &AccountInfo<'a>,
+    ) -> ProgramResult {
+        let vault_x_account = spl_token::state::Account::unpack(vault_x.data.borrow().as_ref())?;
+        let vault_y_account = spl_token::state::Account::unpack(vault_y.data.borrow().as_ref())?;
+
+        let mint_x_decimals = Mint::unpack(mint_x.data.borrow().as_ref())?.decimals;
+        let mint_y_decimals = Mint::unpack(mint_y.data.borrow().as_ref())?.decimals;
+
+        let x_reserve = vault_x_account.amount;
+        let y_reserve = vault_y_account.amount;
+        
+        let fee_numerator = config_account.fee as u64;
+        let fee_denominator = 10_000u64;
+        
+        let amount_with_fee = amount.checked_mul(fee_denominator - fee_numerator)
+            .ok_or(ProgramError::InvalidArgument)?
+            .checked_div(fee_denominator)
+            .ok_or(ProgramError::InvalidArgument)?;
+            
+        let denominator = x_reserve.checked_add(amount_with_fee)
+            .ok_or(ProgramError::InvalidArgument)?;
+        
+        let output_amount = y_reserve
+            .checked_mul(amount_with_fee)
+            .ok_or(ProgramError::InvalidArgument)?
+            .checked_div(denominator)
+            .ok_or(ProgramError::InvalidArgument)?;
+
+        if output_amount < min {
+            return Err(ProgramError::InsufficientFunds);
+        }
+
+        deposit(
+            token_program,
+            user_from,
+            mint_x,
+            vault_x,
+            user_to,
+            amount,
+            mint_x_decimals,
+        )?;
+
+        withdraw(
+            token_program,
+            vault_y,
+            mint_y,
+            user_to,
+            config,
+            output_amount,
+            mint_y_decimals,
+            &[
+                b"config",
+                config_account.seed.to_le_bytes().as_ref(),
+                &[config_account.config_bump],
+            ],
+        )?;
+
+        Ok(())
     }
 }

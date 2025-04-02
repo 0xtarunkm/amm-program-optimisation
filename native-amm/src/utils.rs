@@ -189,3 +189,30 @@ pub fn mint<'a>(
         &[seeds],
     )
 }
+
+#[inline]
+pub fn withdraw<'a>(
+    token_program: &Pubkey,
+    vault: &AccountInfo<'a>,
+    mint: &AccountInfo<'a>,
+    user: &AccountInfo<'a>,
+    authority: &AccountInfo<'a>,
+    amount: u64,
+    decimals: u8,
+    seeds: &[&[u8]],
+) -> ProgramResult {
+    invoke_signed(
+        &transfer_checked(
+            token_program,
+            vault.key,
+            mint.key,
+            user.key,
+            authority.key,
+            &[],
+            amount,
+            decimals,
+        )?,
+        &[vault.clone(), mint.clone(), user.clone(), authority.clone()],
+        &[seeds],
+    )
+}
