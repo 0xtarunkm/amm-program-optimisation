@@ -170,18 +170,20 @@ impl Config {
 
         let x_reserve = vault_x_account.amount;
         let y_reserve = vault_y_account.amount;
-        
+
         let fee_numerator = config_account.fee as u64;
         let fee_denominator = 10_000u64;
-        
-        let amount_with_fee = amount.checked_mul(fee_denominator - fee_numerator)
+
+        let amount_with_fee = amount
+            .checked_mul(fee_denominator - fee_numerator)
             .ok_or(ProgramError::InvalidArgument)?
             .checked_div(fee_denominator)
             .ok_or(ProgramError::InvalidArgument)?;
-            
-        let denominator = x_reserve.checked_add(amount_with_fee)
+
+        let denominator = x_reserve
+            .checked_add(amount_with_fee)
             .ok_or(ProgramError::InvalidArgument)?;
-        
+
         let output_amount = y_reserve
             .checked_mul(amount_with_fee)
             .ok_or(ProgramError::InvalidArgument)?

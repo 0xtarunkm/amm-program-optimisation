@@ -1,14 +1,8 @@
 use solana_program::{
-    account_info::AccountInfo, 
-    entrypoint::ProgramResult, 
-    program_error::ProgramError,
+    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
 };
 
-use crate::{
-    instruction::Swap,
-    state::Config,
-    utils::perform_basic_checks,
-};
+use crate::{instruction::Swap, state::Config, utils::perform_basic_checks};
 
 pub fn process(accounts: &[AccountInfo<'_>], data: &[u8]) -> ProgramResult {
     let Swap {
