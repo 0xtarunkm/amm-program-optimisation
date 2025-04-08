@@ -11,12 +11,11 @@ use crate::{
 };
 
 pub fn process(accounts: &[AccountInfo<'_>], data: &[u8]) -> ProgramResult {
-    let Initialize {
-        seed,
-        fee,
-        authority,
-        padding,
-    } = Initialize::try_from(data)?;
+    let initialize = Initialize::try_from(data)?;
+    let seed = initialize.seed;
+    let fee = initialize.fee;
+    let authority = initialize.authority;
+    let padding = initialize.padding;
 
     let [initializer, mint_x, mint_y, mint_lp, vault_x, vault_y, config, token_program, _system_program] =
         accounts

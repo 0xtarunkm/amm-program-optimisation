@@ -6,12 +6,11 @@ use solana_program::{
 use crate::{instruction::Deposit, state::Config};
 
 pub fn process(accounts: &[AccountInfo<'_>], data: &[u8]) -> ProgramResult {
-    let Deposit {
-        amount,
-        max_x,
-        max_y,
-        expiration,
-    } = Deposit::try_from(data)?;
+    let deposit = Deposit::try_from(data)?;
+    let amount = deposit.amount;
+    let max_x = deposit.max_x;
+    let max_y = deposit.max_y;
+    let expiration = deposit.expiration;
 
     let [user, mint_x, mint_y, mint_lp, user_x, user_y, user_lp, vault_x, vault_y, config, token_program, _system_program] =
         accounts

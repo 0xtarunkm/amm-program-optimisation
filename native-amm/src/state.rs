@@ -1,5 +1,4 @@
-use amm_macros::TryFromBytes;
-use bytemuck::{Pod, Zeroable};
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::program::invoke_signed;
@@ -13,8 +12,7 @@ use spl_token::state::Mint;
 
 use crate::utils::{check_pda_and_get_bump, deposit, mint, withdraw};
 
-#[repr(C)]
-#[derive(Clone, Copy, Pod, Zeroable, TryFromBytes)]
+#[derive(BorshSerialize, BorshDeserialize)]
 pub struct Config {
     pub seed: u64,
     pub authority: Pubkey,
@@ -30,6 +28,10 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn try_from(data: &[u8]) -> Result<Self, ProgramError> {
+        Self::try_from_slice(data).map_err(|_| ProgramError::InvalidAccountData)
+    }
+
     pub fn initialize<'a>(
         seed: u64,
         authority: Pubkey,
@@ -53,7 +55,7 @@ impl Config {
         let _ = spl_token::state::Mint::unpack(&mint_x.try_borrow_data()?);
         let _ = spl_token::state::Mint::unpack(&mint_y.try_borrow_data()?);
 
-        let config_space = core::mem::size_of::<Config>();
+        let config_space = std::mem::size_of::<Config>() + 32; // Extra space for Borsh serialization
         let config_rent = Rent::get()?.minimum_balance(config_space);
 
         invoke_signed(
@@ -68,11 +70,7 @@ impl Config {
             &[&[b"config", seed.to_le_bytes().as_ref(), &[config_bump]]],
         )?;
 
-        let mut config_data: Config =
-            *bytemuck::try_from_bytes_mut::<Config>(*config.data.borrow_mut())
-                .map_err(|_| ProgramError::InvalidAccountData)?;
-
-        config_data.clone_from(&Config {
+        let config_data = Config {
             seed,
             authority,
             mint_x: *mint_x.key,
@@ -84,7 +82,10 @@ impl Config {
             x_bump,
             y_bump,
             padding: [0; 1],
-        });
+        };
+
+        config_data.serialize(&mut *config.data.borrow_mut())
+            .map_err(|_| ProgramError::InvalidAccountData)?;
 
         Ok(())
     }

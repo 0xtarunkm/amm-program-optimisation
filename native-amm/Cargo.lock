@@ -663,7 +663,7 @@ name = "native-amm"
 version = "0.1.0"
 dependencies = [
  "amm_macros",
- "bytemuck",
+ "borsh 1.5.7",
  "solana-program",
  "spl-token",
  "spl-token-2022",

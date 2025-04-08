@@ -5,11 +5,10 @@ use solana_program::{
 use crate::{instruction::Swap, state::Config, utils::perform_basic_checks};
 
 pub fn process(accounts: &[AccountInfo<'_>], data: &[u8]) -> ProgramResult {
-    let Swap {
-        amount,
-        min,
-        expiration,
-    } = Swap::try_from(data)?;
+    let swap = Swap::try_from(data)?;
+    let amount = swap.amount;
+    let min = swap.min;
+    let expiration = swap.expiration;
 
     let [user, mint_x, mint_y, vault_x, vault_y, user_x, user_y, config, token_program, _system_program] =
         accounts
